@@ -1,5 +1,6 @@
 package com.revshop.notification.controller;
 
+import com.revshop.notification.dto.ApiResponse;
 import com.revshop.notification.dto.OrderItemResponseDTO;
 import com.revshop.notification.dto.OrdersDTO;
 import com.revshop.notification.model.Notification;
@@ -21,7 +22,7 @@ public class NotificationController {
     }
 
     @PostMapping
-    public ResponseEntity<Notification> createNotification(@RequestBody Map<String, Object> request) {
+    public ResponseEntity<ApiResponse<Notification>> createNotification(@RequestBody Map<String, Object> request) {
         Long userId = Long.valueOf(request.get("userId").toString());
         String title = (String) request.get("title");
         String message = (String) request.get("message");
@@ -29,23 +30,23 @@ public class NotificationController {
         String targetId = (String) request.get("targetId");
 
         Notification notification = notificationService.createNotification(userId, title, message, type, targetId);
-        return ResponseEntity.ok(notification);
+        return ResponseEntity.ok(new ApiResponse<>("Notification created successfully", notification));
     }
 
     @GetMapping("/user/{userId}")
-    public ResponseEntity<List<Notification>> getNotifications(@PathVariable Long userId) {
-        return ResponseEntity.ok(notificationService.getNotificationsForUser(userId));
+    public ResponseEntity<ApiResponse<List<Notification>>> getNotifications(@PathVariable Long userId) {
+        return ResponseEntity.ok(new ApiResponse<>("Notifications fetched successfully", notificationService.getNotificationsForUser(userId)));
     }
 
     @GetMapping("/user/{userId}/unread")
-    public ResponseEntity<List<Notification>> getUnreadNotifications(@PathVariable Long userId) {
-        return ResponseEntity.ok(notificationService.getUnreadNotificationsForUser(userId));
+    public ResponseEntity<ApiResponse<List<Notification>>> getUnreadNotifications(@PathVariable Long userId) {
+        return ResponseEntity.ok(new ApiResponse<>("Unread notifications fetched successfully", notificationService.getUnreadNotificationsForUser(userId)));
     }
 
     @PutMapping("/{id}/read")
-    public ResponseEntity<Void> markAsRead(@PathVariable Long id) {
+    public ResponseEntity<ApiResponse<Void>> markAsRead(@PathVariable Long id) {
         notificationService.markAsRead(id);
-        return ResponseEntity.ok().build();
+        return ResponseEntity.ok(new ApiResponse<>("Notification marked as read", null));
     }
 
     @PostMapping("/email")
