@@ -43,42 +43,60 @@ public class TwilioSmsService {
         return accountSid == null || !accountSid.startsWith("AC");
     }
 
+    private String formatMobileNumber(String number) {
+        if (number == null) return null;
+        // Remove any non-numeric characters
+        String cleanNumber = number.replaceAll("[^0-9]", "");
+        // If it's a 10-digit number, assume Indian (+91)
+        if (cleanNumber.length() == 10) {
+            return "+91" + cleanNumber;
+        }
+        // If it already starts with +, assume it's already formatted
+        if (number.startsWith("+")) {
+            return number;
+        }
+        // Fallback: add + if missing
+        return "+" + cleanNumber;
+    }
+
     public void sendSmsOtp(String mobileNumber) {
-        log.info("Sending SMS OTP to {}", mobileNumber);
+        String formattedNumber = formatMobileNumber(mobileNumber);
+        log.info("Sending SMS OTP to {}", formattedNumber);
         if (isSimulated()) {
             // Generate a 6-digit OTP and store it
             String otp = String.format("%06d", random.nextInt(1_000_000));
-            simulatedOtpStore.put(mobileNumber, otp);
+            simulatedOtpStore.put(formattedNumber, otp);
             // Print clearly so it's visible in service logs for dev/demo purposes
             log.warn("============================================");
-            log.warn("  [DEV MODE] OTP for {} is: {}", mobileNumber, otp);
+            log.warn("  [DEV MODE] OTP for {} is: {}", formattedNumber, otp);
             log.warn("  (Twilio is not configured — check server logs for OTP)");
             log.warn("============================================");
             return;
         }
-        Verification.creator(verifyServiceSid, mobileNumber, "sms").create();
+        Verification.creator(verifyServiceSid, formattedNumber, "sms").create();
     }
 
     public boolean verifyMobileKyc(String mobileNumber, String otp) {
-        log.info("Checking SMS OTP for {}", mobileNumber);
+        String formattedNumber = formatMobileNumber(mobileNumber);
+        log.info("Checking SMS OTP for {}", formattedNumber);
         if (isSimulated()) {
-            String storedOtp = simulatedOtpStore.get(mobileNumber);
+            String storedOtp = simulatedOtpStore.get(formattedNumber);
             if (storedOtp == null) {
-                log.warn("No OTP found for {} — did you call sendSmsOtp first?", mobileNumber);
+                log.warn("No OTP found for {} — did you call sendSmsOtp first?", formattedNumber);
                 return false;
             }
             boolean matched = storedOtp.equals(otp);
             if (matched) {
-                simulatedOtpStore.remove(mobileNumber); // OTP consumed after successful verification
-                log.info("Simulated OTP verified successfully for {}", mobileNumber);
+                simulatedOtpStore.remove(formattedNumber); // OTP consumed after successful verification
+                log.info("Simulated OTP verified successfully for {}", formattedNumber);
             } else {
-                log.warn("Simulated OTP mismatch for {} — entered: {}, expected: {}", mobileNumber, otp, storedOtp);
+                log.warn("Simulated OTP mismatch for {} — entered: {}, expected: {}", formattedNumber, otp, storedOtp);
             }
             return matched;
         }
         VerificationCheck verificationCheck = VerificationCheck.creator(verifyServiceSid)
                 .setCode(otp)
-                .setTo(mobileNumber).create();
+                .setTo(formattedNumber).create();
         return "approved".equals(verificationCheck.getStatus());
     }
 }
